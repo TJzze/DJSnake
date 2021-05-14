@@ -1,16 +1,16 @@
 const BOARD_ROWS  = 22;
 const BOARD_COLS  = 20;
 const SNAKE_INIT  = 1;
-const SNAKE_SPEED = 500; 
+const SNAKE_SPEED = 200; 
 const EXPAN_RATE  = 1;
-const snakeBody = [
+var snakeBody = [
     {x: 10, y: 10},
     {x: 11, y: 10},
     {x: 12, y: 10},
     {x: 13, y: 10},
     {x: 14, y: 10}
 ];
-const food = setFood();
+var food = setFood();
 
 
 function expandSnake() {
@@ -23,26 +23,46 @@ function onFood() {
     return snakeBody[0].x === food.x && snakeBody[0].y === food.y
 }
 
-function onSnake(position) {
-    return snakeBody.some(bodyPart => {
-        bodyPart.x === position.x && bodyPart.y === position.y
+function onSnake(position, ignore) {
+    return snakeBody.some((bodyPart, index) => {
+        if (ignore && index === 0) return false
+        return bodyPart.x === position.x && bodyPart.y === position.y
     })
 }
 
-// function setFood() {
-//     var position = {x: 0, y: 0};
-//     while (position == null || onSnake(position)) {
-//         position.x = randomx();
-//         position.y = randomy();
-//     }
+function setFood() {
+    var position = {x: -1, y: -1};
+    while (position.x === -1 || onSnake(position, false)) {
+        position.x = Math.floor(Math.random() * BOARD_COLS);
+        position.y = Math.floor(Math.random() * BOARD_ROWS);
+    }
 
-//     return position;
-// }
+    return position;
+}
+
+function snakeEatSnake() {
+    var x = snakeBody[0].x;
+    var y = snakeBody[0].y;
+
+    var head = {x, y}
+    var ignore = true;
+    return onSnake(head, ignore);
+}
+
+function eatFood(list) {
+    var x = food.x;
+    var y = food.y;
+
+    list[y].children[x].classList.remove('food');
+}
  
 function snakeMove(direction) {
     if (onFood()) {
+        eatFood(document.querySelectorAll('.row-element'));
         expandSnake();
-        setFood();
+        food = setFood();
+        // console.log(snakeBody);
+        // console.log(food);
         drawFood(document.querySelectorAll('.row-element'));
     }
 
@@ -50,8 +70,22 @@ function snakeMove(direction) {
         snakeBody[i + 1] = { ...snakeBody[i] };
     }
 
-    snakeBody[0].x += direction.x;
-    snakeBody[0].y += direction.y;
+    if (snakeBody[0].x === 0 && direction.x === -1) {
+        snakeBody[0].x = BOARD_COLS - 1;
+        snakeBody[0].y += direction.y;
+    } else if (snakeBody[0].x === BOARD_COLS - 1 && direction.x === 1) {
+        snakeBody[0].x = 0;
+        snakeBody[0].y += direction.y;
+    } else if (snakeBody[0].y === 0 && direction.y === -1) {
+        snakeBody[0].x += direction.x;
+        snakeBody[0].y = BOARD_ROWS - 1;
+    } else if (snakeBody[0].y === BOARD_ROWS - 1 && direction.y === 1) {
+        snakeBody[0].x += direction.x;
+        snakeBody[0].y = 0;
+    } else {
+        snakeBody[0].x += direction.x;
+        snakeBody[0].y += direction.y;
+    }
 }
 
 function updateBoard(list, tail) {
@@ -64,6 +98,8 @@ function updateBoard(list, tail) {
 }
 
 function drawBoard() {
+    document.querySelector('.gameboard').innerHTML = "";
+
     for (let i = 0; i < BOARD_ROWS; i++) {
         const boardRowElement = document.createElement('div');
         boardRowElement.classList.add('row-element');
@@ -89,7 +125,10 @@ function drawSnake(list) {
 }
 
 function drawFood(list) {
-    list[food.y].children[food.x].classList.add('food');
+    var x = food.x;
+    var y = food.y;
+
+    list[y].children[x].classList.add('food');
 }
 
 function setDirection(e, oldDirection) {
@@ -112,7 +151,7 @@ function setDirection(e, oldDirection) {
             break
 
         case 'ArrowRight' :
-            if (oldDirection.x !== 0) break
+            if (oldDirection.x !== 0 || (oldDirection.x === 0 && oldDirection.y === 0) ) break
             inputDirection = {x: 1, y: 0}
             break
     }
@@ -126,6 +165,13 @@ function setDirection(e, oldDirection) {
 
 async function main() {
     drawBoard();
+    snakeBody = [
+        {x: 10, y: 10},
+        {x: 11, y: 10},
+        {x: 12, y: 10},
+        {x: 13, y: 10},
+        {x: 14, y: 10}
+    ];
 
     var gridList = document.querySelectorAll('.row-element');
     drawSnake(gridList);
@@ -138,9 +184,12 @@ async function main() {
 
     setInterval(function gameProcess() { 
         var tail = [snakeBody[snakeBody.length - 1].x, snakeBody[snakeBody.length - 1].y];  
-        snakeMove(direction);
         if (direction.x !== 0 || direction.y !== 0) {
+            snakeMove(direction);
             updateBoard(gridList, tail);
+            if (snakeEatSnake) {
+                console.log("snakeeee");
+            }
         }
     }, SNAKE_SPEED);
 }
