@@ -1,15 +1,9 @@
 const BOARD_ROWS  = 22;
 const BOARD_COLS  = 20;
 const SNAKE_INIT  = 1;
-const SNAKE_SPEED = 200; 
+const SNAKE_SPEED = 100; 
 const EXPAN_RATE  = 1;
-var snakeBody = [
-    {x: 10, y: 10},
-    {x: 11, y: 10},
-    {x: 12, y: 10},
-    {x: 13, y: 10},
-    {x: 14, y: 10}
-];
+var snakeBody = [];
 var food = setFood();
 
 
@@ -25,8 +19,8 @@ function onFood() {
 
 function onSnake(position, ignore) {
     return snakeBody.some((bodyPart, index) => {
-        if (ignore && index === 0) return false
-        return bodyPart.x === position.x && bodyPart.y === position.y
+        if (ignore && index === 0) return false;
+        return bodyPart.x === position.x && bodyPart.y === position.y;
     })
 }
 
@@ -61,8 +55,6 @@ function snakeMove(direction) {
         eatFood(document.querySelectorAll('.row-element'));
         expandSnake();
         food = setFood();
-        // console.log(snakeBody);
-        // console.log(food);
         drawFood(document.querySelectorAll('.row-element'));
     }
 
@@ -187,8 +179,8 @@ async function main() {
         if (direction.x !== 0 || direction.y !== 0) {
             snakeMove(direction);
             updateBoard(gridList, tail);
-            if (snakeEatSnake) {
-                console.log("snakeeee");
+            if (snakeEatSnake()) {
+                main();
             }
         }
     }, SNAKE_SPEED);
