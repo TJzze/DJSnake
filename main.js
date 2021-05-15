@@ -1,162 +1,242 @@
-const BOARD_ROWS  = 22;
-const BOARD_COLS  = 20;
-const SNAKE_INIT  = 1;
-const SNAKE_SPEED = 100; 
-const EXPAN_RATE  = 1;
-var snakeBody = [];
-var food = setFood();
+const Direction = {
+    None: 0,
+    Left: 1,
+    Right: 2,
+    Up: 3,
+    Down: 4,
+};
 
+class GameBoard {
+    constructor(boardRows, boardCols, board) {
+        this.rowCount = boardRows;
+        this.colCount = boardCols;
+        this.board = board;
+    }
 
-function expandSnake() {
-    for (let i = 0; i < EXPAN_RATE; i++) {
-        snakeBody.push({ ...snakeBody[snakeBody.length - 1]});
+    getRows () {
+        return this.rowCount;
+    }
+
+    getCols () {
+        return this.colCount;
+    }
+
+    drawBoard () {
+        this.board.innerHTML = "";
+
+        for (let i = 0; i < this.rowCount; i++) {
+            const boardRowElement = document.createElement('div');
+            boardRowElement.classList.add('row-element');
+
+            for (let j = 0; j < this.colCount; j++) {
+                const block = document.createElement('div');
+                block.classList.add('block');
+                boardRowElement.appendChild(block);
+            }  
+
+            this.board
+                .appendChild(boardRowElement);
+        }
     }
 }
 
-function onFood() {
-    return snakeBody[0].x === food.x && snakeBody[0].y === food.y
-}
-
-function onSnake(position, ignore) {
-    return snakeBody.some((bodyPart, index) => {
-        if (ignore && index === 0) return false;
-        return bodyPart.x === position.x && bodyPart.y === position.y;
-    })
-}
-
-function setFood() {
-    var position = {x: -1, y: -1};
-    while (position.x === -1 || onSnake(position, false)) {
-        position.x = Math.floor(Math.random() * BOARD_COLS);
-        position.y = Math.floor(Math.random() * BOARD_ROWS);
+class Snake {
+    constructor(snakeBody, speed, list) {
+        this.snake = snakeBody;
+        this.snakeSpeed = speed;
+        this.list = list;
     }
 
-    return position;
-}
+    drawSnake() {
+        for (let i = 0; i < this.snake.length; i++) {
+            var x = this.snake[i].x;
+            var y = this.snake[i].y;
 
-function snakeEatSnake() {
-    var x = snakeBody[0].x;
-    var y = snakeBody[0].y;
-
-    var head = {x, y}
-    var ignore = true;
-    return onSnake(head, ignore);
-}
-
-function eatFood(list) {
-    var x = food.x;
-    var y = food.y;
-
-    list[y].children[x].classList.remove('food');
-}
- 
-function snakeMove(direction) {
-    if (onFood()) {
-        eatFood(document.querySelectorAll('.row-element'));
-        expandSnake();
-        food = setFood();
-        drawFood(document.querySelectorAll('.row-element'));
+            this.list[y].children[x].classList.add('snake');
+        }
     }
 
-    for (let i = snakeBody.length - 2; i >= 0; i--) {
-        snakeBody[i + 1] = { ...snakeBody[i] };
+    getSpeed() {
+        return this.snakeSpeed;
     }
 
-    if (snakeBody[0].x === 0 && direction.x === -1) {
-        snakeBody[0].x = BOARD_COLS - 1;
-        snakeBody[0].y += direction.y;
-    } else if (snakeBody[0].x === BOARD_COLS - 1 && direction.x === 1) {
-        snakeBody[0].x = 0;
-        snakeBody[0].y += direction.y;
-    } else if (snakeBody[0].y === 0 && direction.y === -1) {
-        snakeBody[0].x += direction.x;
-        snakeBody[0].y = BOARD_ROWS - 1;
-    } else if (snakeBody[0].y === BOARD_ROWS - 1 && direction.y === 1) {
-        snakeBody[0].x += direction.x;
-        snakeBody[0].y = 0;
-    } else {
-        snakeBody[0].x += direction.x;
-        snakeBody[0].y += direction.y;
+    getSnake() {
+        return this.snake;
+    }
+
+    getTail() {
+        var index = this.snake.length - 1;
+        var tail = [this.snake[index].x, this.snake[index].y];
+        return tail;
+    }
+
+    getHead() {
+        var index = 0;
+        var head = [this.snake[index].x, this.snake[index].y];
+        return head;
+    }
+
+    expandSnake(expandRate) {
+        for (let i = 0; i < expandRate; i++) {
+            this.snake.push({ ...this.snake[this.snake.length - 1]});
+        }
+    }
+
+    updateSnakePosition(tail) { 
+        this.list[tail[1]].children[tail[0]].classList.remove('snake');
+
+        var head = this.getHead();
+
+        this.list[head[1]].children[head[0]].classList.add('snake'); 
+    }
+
+    onSnake(position, ignore) {
+        return this.snake.some((bodyPart, index) => {
+            if (ignore && index === 0) return false;
+            return bodyPart.x === position[0] && bodyPart.y === position[1];
+        });
+    }
+
+    snakeEatSnake() {
+        var head = this.getHead();
+        var ignore = true;
+        return this.onSnake(head, ignore);
     }
 }
 
-function updateBoard(list, tail) {
-    list[tail[1]].children[tail[0]].classList.remove('snake');
+class Food {
+    constructor(list, food) {
+        this.food = food;
+        this.list = list;
+    }
 
-    var headx = snakeBody[0].x;
-    var heady = snakeBody[0].y;
+    getFood() {
+        return this.food;
+    }
 
-    list[heady].children[headx].classList.add('snake'); 
-}
+    drawFood(newFood) {
+        this.food = newFood;
+        var x = this.food.x;
+        var y = this.food.y;
 
-function drawBoard() {
-    document.querySelector('.gameboard').innerHTML = "";
+        this.list[y].children[x].classList.add('food');
+    }
 
-    for (let i = 0; i < BOARD_ROWS; i++) {
-        const boardRowElement = document.createElement('div');
-        boardRowElement.classList.add('row-element');
+    eatFood() {
+        var x = this.food.x;
+        var y = this.food.y;
 
-        for (let j = 0; j < BOARD_COLS; j++) {
-            const block = document.createElement('div');
-            block.classList.add('block');
-            boardRowElement.appendChild(block);
-        }  
-
-        document.querySelector('.gameboard')
-            .appendChild(boardRowElement);
+        this.list[y].children[x].classList.remove('food');
     }
 }
 
-function drawSnake(list) {
-    for (let i = 0; i < snakeBody.length; i++) {
-        var x = snakeBody[i].x;
-        var y = snakeBody[i].y;
+class SnakeAndFoodPositions {
+    constructor(snake, food, board) {
+        this.snake = snake;
+        this.food = food;
+        this.board = board;
+    }
 
-        list[y].children[x].classList.add('snake');
+    onFood() {
+        var head = this.snake.getHead();
+        var food = this.food.getFood();
+        return head[0] === food.x && head[1] === food.y;
+    }
+
+    setFood() {
+        var position = {x: -1, y: -1};
+        while (position.x === -1 || this.snake.onSnake(position, false)) {
+            position.x = Math.floor(Math.random() * this.board.getCols());
+            position.y = Math.floor(Math.random() * this.board.getRows());
+        }
+
+        return position;
     }
 }
 
-function drawFood(list) {
-    var x = food.x;
-    var y = food.y;
-
-    list[y].children[x].classList.add('food');
-}
-
-function setDirection(e, oldDirection) {
-    let inputDirection = {x: 0, y: 0};
-
-    switch (e.key) {
-        case 'ArrowUp' :
-            if (oldDirection.y !== 0) break
-            inputDirection = {x: 0, y: -1}
-            break
-
-        case 'ArrowDown' :
-            if (oldDirection.y !== 0) break
-            inputDirection = {x: 0, y: 1}
-            break
-
-        case 'ArrowLeft' :
-            if (oldDirection.x !== 0) break
-            inputDirection = {x: -1, y: 0}
-            break
-
-        case 'ArrowRight' :
-            if (oldDirection.x !== 0 || (oldDirection.x === 0 && oldDirection.y === 0) ) break
-            inputDirection = {x: 1, y: 0}
-            break
+class GameProcess {
+    constructor(snake, food, positions, board) {
+        this.snake = snake;
+        this.food = food;
+        this.positions = positions;
+        this.board = board;
     }
 
-    if (inputDirection.x === 0 && inputDirection.y === 0) {
-        return oldDirection;
+    setDirection(e, oldDirection) {
+        let inputDirection = Direction.None;
+
+        switch (e.key) {
+            case 'ArrowUp' :
+                if (oldDirection === Direction.Up || oldDirection === Direction.Down) break
+                inputDirection = Direction.Up;
+                break
+
+            case 'ArrowDown' :
+                if (oldDirection === Direction.Up || oldDirection === Direction.Down) break
+                inputDirection = Direction.Down;
+                break
+
+            case 'ArrowLeft' :
+                if (oldDirection === Direction.Right || oldDirection === Direction.Left) break
+                inputDirection = Direction.Left;
+                break
+
+            case 'ArrowRight' :
+                if ((oldDirection === Direction.Right || oldDirection === Direction.Left) || (oldDirection === Direction.None)) break
+                inputDirection = Direction.Right;
+                break
+        }
+
+        if (inputDirection === Direction.None) {
+            return oldDirection;
+        }
+
+        return inputDirection;
     }
 
-    return inputDirection;
+    move(direction) {
+        if (this.positions.onFood()) {
+            this.food.eatFood();
+            this.snake.expandSnake(3);
+            var foodNewPos = this.positions.setFood();
+            this.food.drawFood(foodNewPos);
+        }
+
+        for (let i = this.snake.getSnake().length - 2; i >= 0; i--) {
+            this.snake.getSnake()[i + 1] = { ...this.snake.getSnake()[i] };
+        }
+
+        var snakeBody = this.snake.getSnake();
+
+        if (snakeBody[0].x === 0 && direction === Direction.Left) {
+            snakeBody[0].x = this.board.getCols() - 1;
+        } else if (snakeBody[0].x === this.board.getCols() - 1 && direction === Direction.Right) {
+            snakeBody[0].x = 0;
+        } else if (snakeBody[0].y === 0 && direction === Direction.Up) {
+            snakeBody[0].y = this.board.getRows() - 1;
+        } else if (snakeBody[0].y === this.board.getRows() - 1 && direction === Direction.Down) {
+            snakeBody[0].y = 0;
+        } else {
+            if (direction === Direction.Up) {
+                snakeBody[0].y += -1;   
+            } else if (direction === Direction.Down) {
+                snakeBody[0].y += 1;
+            } else if (direction === Direction.Left) {
+                snakeBody[0].x += -1;
+            } else if (direction === Direction.Right) {
+                snakeBody[0].x += 1;
+            }
+        }
+    }
 }
 
 async function main() {
-    drawBoard();
+    var board = document.querySelector('.gameboard');
+    const gameBoard = new GameBoard(22, 20, board);
+    gameBoard.drawBoard();
+
+    var list = document.querySelectorAll('.row-element');
+
     snakeBody = [
         {x: 10, y: 10},
         {x: 11, y: 10},
@@ -164,26 +244,34 @@ async function main() {
         {x: 13, y: 10},
         {x: 14, y: 10}
     ];
+    var snakeSpeed = 200;
+    const snake = new Snake(snakeBody, snakeSpeed, list);
 
-    var gridList = document.querySelectorAll('.row-element');
-    drawSnake(gridList);
-    drawFood(gridList);
+    var foodPos = {x: 0, y: 0};
+    const food = new Food(list, foodPos);
 
-    let direction = {x: 0, y: 0};
+    const sfPositions = new SnakeAndFoodPositions(snake, food, gameBoard);
+
+    const game = new GameProcess(snake, food, sfPositions, gameBoard);
+
+    snake.drawSnake();
+    food.drawFood(foodPos);
+
+    let direction = Direction.None;
     window.addEventListener('keydown', e => {
-        direction = setDirection(e, direction);
+        direction = game.setDirection(e, direction);
     })
 
     setInterval(function gameProcess() { 
-        var tail = [snakeBody[snakeBody.length - 1].x, snakeBody[snakeBody.length - 1].y];  
-        if (direction.x !== 0 || direction.y !== 0) {
-            snakeMove(direction);
-            updateBoard(gridList, tail);
-            if (snakeEatSnake()) {
+        var tail = snake.getTail(); 
+        if (direction != Direction.None) {
+            game.move(direction);
+            snake.updateSnakePosition(tail);
+            if (snake.snakeEatSnake()) {
                 main();
             }
         }
-    }, SNAKE_SPEED);
+    }, snake.getSpeed());
 }
 
 window.addEventListener('load', main);
